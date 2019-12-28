@@ -1,13 +1,14 @@
-**Description:**
+# [NMRiH] Multilingual Objectives
 
+### Description 
 This plugin adds localization support for native objective messages. 
-It differs from [[NMRiH]Multilingual Objective Beta 1.41]("https://forums.alliedmods.net/showthread.php?p=2305894") in that it overrides the actual screen pop-up, rather than displaying additional game text.
+It differs from [\[NMRiH\]Multilingual Objective Beta 1.41]("https://forums.alliedmods.net/showthread.php?p=2305894") in that it overrides the actual screen pop-up, rather than displaying additional game text.
 
 After you've included the translated text, players in your server will see objective descriptions in their preferred language. If a value for the preferred language does not exist, the original message will be shown. A client's language is determined by either the language that they have Steam set to, or any -language override on the game's launch options.
 
-**Adding translations:**
+### Adding translations
 
-Each objective has a unique identifier associated with it, with the format "<map name> <objective name>".
+Each objective has a unique identifier associated with it, with the format "\<map name\> \<objective name\>".
 To translate an objective message into multiple languages, you must add its identifier to *translations/multilingual-objectives.phrases.txt*
 
 This is what the translation file might look like:
@@ -29,7 +30,7 @@ This is what the translation file might look like:
 
 [List of country codes]("https://www.iban.com/country-codes").
 
-You can get a list of all objective names for a map using the [FONT="Courier New"]dump_objectives[/FONT] console command and looking at the second argument:
+You can get a list of all objective names for a map using the `dump_objectives` console command and looking at the second argument:
 
 	] sv_cheats 1; dump_objectives
 	24: objStart - Break out of the attic.
@@ -41,12 +42,12 @@ You can get a list of all objective names for a map using the [FONT="Courier New
 	30: ObjE - Blast through cabin wall.
 
 
-Admins can also use the helper command [FONT="Courier New"]sm_oid [/FONT]to fetch the translation phrase for the current objective.
+Admins can also use the helper command `sm_oid` to fetch the translation phrase for the current objective.
 ```
 	Admin: /oid
-	Current objective: **nmo_cabin objStart **
+	Current objective: nmo_cabin objStart 
 ```
-**ConVars:**
+### ConVars
 
-[*]**sm_translate_objectives** (1/0) (Default: 1)
-* Toggle the translation of objective messages.
+* **sm_translate_objectives** (1/0) (Default: 1)
+    * Toggle the translation of objective messages.

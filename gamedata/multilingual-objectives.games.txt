@@ -1,0 +1,34 @@
+"Games"
+{
+	"nmrih"
+	{
+		"Addresses"
+		{
+			"CNMRiH_ObjectiveManager"
+			{
+				"windows"
+				{
+					"signature" "ObjectivesParser::ParseObjectives"				
+					"read" "10"	
+				}
+
+				"linux"
+				{
+					"signature" "ObjectivesParser::ParseObjectives"				
+					"read" "10"	
+				}
+			}
+		}
+		
+		"Signatures"
+		{
+			// Used to access g_ObjectiveManager
+			"ObjectivesParser::ParseObjectives"
+			{
+				"library"	"server"
+				"windows"   "\x55\x8B\xEC\x81\xEC\x40\x01\x00\x00\xB9\x2A\x2A\x2A\x2A"
+				"linux"		"?ParseObjectives@ObjectivesParser@@SAXPBD@Z"
+			}
+		}
+	}
+}

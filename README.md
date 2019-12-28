@@ -8,44 +8,45 @@ After you've included the translated text, players in your server will see objec
 
 ### Adding translations
 
-Each objective has a unique identifier associated with it, with the format "\<map name\> \<objective name\>".
+Each objective has a unique identifier associated with it, with the format "`map name` `objective name`".
 To translate an objective message into multiple languages, you must add its identifier to *translations/multilingual-objectives.phrases.txt*
 
 This is what the translation file might look like:
 
-	
-	"Phrases"
+```c	
+"Phrases"
+{
+	"nmo_cabin objStart"
 	{
-		"nmo_cabin objStart"
-		{
-			"fr"      "Sors du grenier"
-			"de"      "Finde einen Weg, um aus dem Dachboden auszubrechen!"
-			"nl"      "Ontsnap van de zolder"
+		"fr"      "Sors du grenier"
+		"de"      "Finde einen Weg, um aus dem Dachboden auszubrechen!"
+		"nl"      "Ontsnap van de zolder"
 
-			// You can also override the default English message
-			"en"      "Hello world"
-		}
+		// You can also override the default English message
+		"en"      "Hello world"
 	}
-	
+}
+```
 
 [List of country codes]("https://www.iban.com/country-codes").
 
 You can get a list of all objective names for a map using the `dump_objectives` console command and looking at the second argument:
 
-	] sv_cheats 1; dump_objectives
-	24: objStart - Break out of the attic.
-	21: ObjA - Find keys to unlock door.
-	25: ObjC - Family is the answer, find the secret book.
-	23: ObjB - Break planks to proceed.
-	26: ObjD - Release stair gate.
-	33: ObjI - Find the car battery, power up the generator and call for help!
-	30: ObjE - Blast through cabin wall.
-
+```
+] sv_cheats 1; dump_objectives
+24: objStart - Break out of the attic.
+21: ObjA - Find keys to unlock door.
+25: ObjC - Family is the answer, find the secret book.
+23: ObjB - Break planks to proceed.
+26: ObjD - Release stair gate.
+33: ObjI - Find the car battery, power up the generator and call for help!
+30: ObjE - Blast through cabin wall.
+```
 
 Admins can also use the helper command `sm_oid` to fetch the translation phrase for the current objective.
 ```
-	Admin: /oid
-	Current objective: nmo_cabin objStart 
+Admin: /oid
+Current objective: nmo_cabin objStart 
 ```
 ### ConVars
 

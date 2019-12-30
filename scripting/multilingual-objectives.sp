@@ -6,15 +6,22 @@
 Handle hGameConf;
 ConVar cvEnabled;
 char mapName[PLATFORM_MAX_PATH];
+Address g_ObjectiveManager;
 
 public Plugin myinfo =
 {
 	name = "[NMRiH] Multilingual Objectives",
 	author = "Dysphie",
 	description = "Display objective messages in the player's preferred language",
-	version = "1.0",
+	version = "1.0.1",
 	url = ""
 };
+
+
+stock Address operator+(Address l, int r)
+{
+	return l + view_as<Address>(r);
+}
 
 public void OnPluginStart() 
 {
@@ -22,6 +29,7 @@ public void OnPluginStart()
 	if(!hGameConf)
 		SetFailState("Failed to load gamedata (multilingual-objectives.games.txt)");
 
+	g_ObjectiveManager = GameConfGetAddress(hGameConf, "CNMRiH_ObjectiveManager");
 	LoadTranslations("multilingual-objectives.phrases");
 
 	cvEnabled = CreateConVar("sm_translate_objectives", "1", "Toggle the translation of objective messages");
@@ -47,7 +55,6 @@ public Action OnCmdIdentifyObjective(int client, int args)
 
 	return Plugin_Handled;
 }
-
 
 public Action OnObjectiveNotification(UserMsg msg, BfRead bf, const int[] players, int playersNum, bool reliable, bool init)
 {
@@ -102,40 +109,26 @@ void TranslateObjectiveNotification(DataPack data)
 void GetTranslationPhraseForObjective(char[] buffer, int maxlength)
 {
 	Address pObjective = GetCurrentObjective();
-	if(IsValidAddress(pObjective))
+	if(pObjective)
 	{
 		char objectiveName[64];
 		GetObjectiveName(pObjective, objectiveName, sizeof(objectiveName));
 
-		if(strlen(objectiveName) > 0)
+		if(!IsNullString(objectiveName))
 			FormatEx(buffer, maxlength, "%s %s", mapName, objectiveName);	
 	}
 }
 
 void GetObjectiveName(Address pObjective, char[] buffer, int maxlength)
 {
-	Address pszValue = Addr(Deref(pObjective + Addr(0x4)));
-	if(IsValidAddress(pszValue))
+	Address pszValue = Addr(Deref(pObjective + 0x4));
+	if(pszValue)
 		GetCharArray(pszValue, buffer, maxlength);
 }
 
 Address GetCurrentObjective()
 {
-	Address pObjectiveManager = GetTheObjectiveManager();
-	Address pObjective = Address_Null;
-	if(IsValidAddress(pObjectiveManager))
-	{
-		pObjective = Addr(Deref(pObjectiveManager + Addr(0x78)));
-	}
-
-	return pObjective;
-}
-
-Address GetTheObjectiveManager()
-{
-	Address pObjectiveManager = Address_Null;
-	pObjectiveManager = GameConfGetAddress(hGameConf, "CNMRiH_ObjectiveManager");
-	return pObjectiveManager;
+	return g_ObjectiveManager ? Addr(Deref(g_ObjectiveManager + Addr(0x78))) : Address_Null;
 }
 
 stock void GetCharArray(Address ptrCharArray, char[] buffer, int maxlength)
@@ -145,13 +138,8 @@ stock void GetCharArray(Address ptrCharArray, char[] buffer, int maxlength)
 	while((c = LoadFromAddress(ptrCharArray + current, NumberType_Int8)) != 0)
 	{
 		Format(buffer, maxlength, "%s%c", buffer, view_as<char>(c));
-		current += Addr(0x1);
+		current += 0x1;
 	}
-}
-
-stock bool IsValidAddress(Address addr)
-{
-	return (addr != Address_Null);
 }
 
 stock Address Addr(any value)

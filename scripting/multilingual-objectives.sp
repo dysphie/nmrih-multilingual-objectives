@@ -1,6 +1,8 @@
+#include <sourcemod>
+#include <sdktools>
 #pragma semicolon 1
 #pragma newdecls required
-#include <sdktools>
+
 #define MAX_USERMSG_SIZE 255
 
 Handle hGameConf;
@@ -13,10 +15,9 @@ public Plugin myinfo =
 	name = "[NMRiH] Multilingual Objectives",
 	author = "Dysphie",
 	description = "Display objective messages in the player's preferred language",
-	version = "1.0.1",
+	version = "1.0.2",
 	url = ""
 };
-
 
 stock Address operator+(Address l, int r)
 {
@@ -30,6 +31,9 @@ public void OnPluginStart()
 		SetFailState("Failed to load gamedata (multilingual-objectives.games.txt)");
 
 	g_ObjectiveManager = GameConfGetAddress(hGameConf, "CNMRiH_ObjectiveManager");
+	if(g_ObjectiveManager == Address_Null)
+		SetFailState("Failed to retrieve the objective manager. Check your gamedata.");
+
 	LoadTranslations("multilingual-objectives.phrases");
 
 	cvEnabled = CreateConVar("sm_translate_objectives", "1", "Toggle the translation of objective messages");

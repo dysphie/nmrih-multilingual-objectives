@@ -15,7 +15,7 @@ public Plugin myinfo =
 	name = "[NMRiH] Multilingual Objectives",
 	author = "Dysphie",
 	description = "Display objective messages in the player's preferred language",
-	version = "1.0.2",
+	version = "1.0.3",
 	url = ""
 };
 
@@ -98,7 +98,7 @@ void TranslateObjectiveNotification(DataPack data)
 
 		char buffer[MAX_USERMSG_SIZE];
 		if(strlen(phrase) > 0 && IsTranslatedForLanguage(phrase, GetClientLanguage(client)))
-			Format(buffer, sizeof(buffer), "%t", phrase);
+			Format(buffer, sizeof(buffer), "%T", phrase, client);
 		else
 			buffer = description;
 

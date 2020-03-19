@@ -98,8 +98,6 @@ void BroadcastTranslatedObjective(DataPack pack)
 		char sBuffer[MAX_USERMSG_SIZE];
 		if(strlen(sPhrase) > 0 && IsTranslatedForLanguage(sPhrase, GetClientLanguage(client)))
 			Format(sBuffer, sizeof(sBuffer), "%T", sPhrase, client);
-
-		PrintToServer("-> to %N (%d): %s", client, client, !sBuffer[0] ? sDescription : sBuffer);
 	
 		Handle msg = StartMessageOne("ObjectiveNotify", client, USERMSG_RELIABLE|USERMSG_BLOCKHOOKS);
 		BfWrite bf = UserMessageToBfWrite(msg);

@@ -5,38 +5,32 @@
 
 #define MAX_USERMSG_SIZE 255
 
-Handle hGameConf;
-ConVar cvEnabled;
-char mapName[PLATFORM_MAX_PATH];
-Address g_ObjectiveManager;
+ConVar g_cvEnabled;
+char g_sMapName[PLATFORM_MAX_PATH];
+Address g_ObjMgr;
 
 public Plugin myinfo =
 {
 	name = "[NMRiH] Multilingual Objectives",
 	author = "Dysphie",
 	description = "Display objective messages in the player's preferred language",
-	version = "1.0.3",
-	url = ""
+	version = "1.0.4",
+	url = "https://forums.alliedmods.net/showthread.php?p=2678257"
 };
-
-stock Address operator+(Address l, int r)
-{
-	return l + view_as<Address>(r);
-}
 
 public void OnPluginStart() 
 {
-	hGameConf = LoadGameConfigFile("multilingual-objectives.games");
+	GameData hGameConf = new GameData("multilingual-objectives.games");
 	if(!hGameConf)
-		SetFailState("Failed to load gamedata (multilingual-objectives.games.txt)");
+		SetFailState("Failed to load gamedata");
 
-	g_ObjectiveManager = GameConfGetAddress(hGameConf, "CNMRiH_ObjectiveManager");
-	if(g_ObjectiveManager == Address_Null)
-		SetFailState("Failed to retrieve the objective manager. Check your gamedata.");
+	g_ObjMgr = hGameConf.GetAddress("CNMRiH_ObjectiveManager");
+	if(!g_ObjMgr)
+		SetFailState("Failed to retrieve the objective manager");
 
 	LoadTranslations("multilingual-objectives.phrases");
 
-	cvEnabled = CreateConVar("sm_translate_objectives", "1", "Toggle the translation of objective messages");
+	g_cvEnabled = CreateConVar("sm_translate_objectives", "1", "Toggle the translation of objective messages");
 	HookUserMessage(GetUserMessageId("ObjectiveNotify"), OnObjectiveNotification, true);
 
 	RegAdminCmd("sm_oid", OnCmdIdentifyObjective, ADMFLAG_GENERIC, "Print out the identifier for the current objective");
@@ -44,16 +38,17 @@ public void OnPluginStart()
 
 public void OnMapStart()
 {
-	GetCurrentMap(mapName, sizeof(mapName));
-	GetMapDisplayName(mapName, mapName, sizeof(mapName));
+	GetCurrentMap(g_sMapName, sizeof(g_sMapName));
+	GetMapDisplayName(g_sMapName, g_sMapName, sizeof(g_sMapName));
 }
 
 public Action OnCmdIdentifyObjective(int client, int args)
 {
-	char phrase[PLATFORM_MAX_PATH];
-	GetTranslationPhraseForObjective(phrase, sizeof(phrase));
-	if(strlen(phrase) > 0)
-		ReplyToCommand(client, "\x04\x01Current objective: \x04%s\x01", phrase);
+	char sPhrase[PLATFORM_MAX_PATH];
+	GetTransPhraseForCurrentObjective(sPhrase, sizeof(sPhrase));
+
+	if(strlen(sPhrase) > 0)
+		ReplyToCommand(client, "\x04\x01Current objective: \x04%s\x01", sPhrase);
 	else
 		ReplyToCommand(client, "Objective identifier could not be determined.");
 
@@ -62,96 +57,93 @@ public Action OnCmdIdentifyObjective(int client, int args)
 
 public Action OnObjectiveNotification(UserMsg msg, BfRead bf, const int[] players, int playersNum, bool reliable, bool init)
 {
-	if(!cvEnabled.BoolValue)
+	if(!g_cvEnabled.BoolValue)
 		return Plugin_Continue;
 
-	// Get objective description
-	char description[MAX_USERMSG_SIZE];
-	bf.ReadString(description, sizeof(description));
+	// Get objective sDescription
+	char sDescription[MAX_USERMSG_SIZE];
+	bf.ReadString(sDescription, sizeof(sDescription));
+
+	DataPack pack = new DataPack();
+	pack.WriteString(sDescription);
+	pack.WriteCell(playersNum);
+
+	for(int i; i < playersNum; i++)
+		pack.WriteCell(GetClientSerial(players[i]));
 
 	// Wait. We cannot send UserMessage inside of a UserMessage Hook
 	// and we also need the new objective boundary to become active
-	DataPack data = new DataPack();
-	data.WriteString(description);
-	RequestFrame(TranslateObjectiveNotification, data);
-
-	// Prevent the original UserMessage from firing 
+	RequestFrame(BroadcastTranslatedObjective, pack);
 	return Plugin_Handled;
 }
 
-void TranslateObjectiveNotification(DataPack data)
+void BroadcastTranslatedObjective(DataPack pack)
 {
-	// Retrieve packed objective description
-	data.Reset();
-	char description[MAX_USERMSG_SIZE];
-	data.ReadString(description, sizeof(description));
-	CloseHandle(data);
+	pack.Reset();
 
-	char phrase[PLATFORM_MAX_PATH];
-	GetTranslationPhraseForObjective(phrase, sizeof(phrase));
+	char sDescription[MAX_USERMSG_SIZE];
+	pack.ReadString(sDescription, sizeof(sDescription));
 
-	// Relay the message to each client in their preferred language, if available
-	for(int client = 1; client <= MaxClients; client++)
+	char sPhrase[PLATFORM_MAX_PATH];
+	GetTransPhraseForCurrentObjective(sPhrase, sizeof(sPhrase));
+
+	int playersNum = pack.ReadCell();
+
+	for(int i; i < playersNum; i++)
 	{
-		if(!IsClientInGame(client))
+		int client = GetClientFromSerial(pack.ReadCell());
+		if(!client)
 			continue;
 
-		char buffer[MAX_USERMSG_SIZE];
-		if(strlen(phrase) > 0 && IsTranslatedForLanguage(phrase, GetClientLanguage(client)))
-			Format(buffer, sizeof(buffer), "%T", phrase, client);
-		else
-			buffer = description;
+		char sBuffer[MAX_USERMSG_SIZE];
+		if(strlen(sPhrase) > 0 && IsTranslatedForLanguage(sPhrase, GetClientLanguage(client)))
+			Format(sBuffer, sizeof(sBuffer), "%T", sPhrase, client);
 
+		PrintToServer("-> to %N (%d): %s", client, client, !sBuffer[0] ? sDescription : sBuffer);
+	
 		Handle msg = StartMessageOne("ObjectiveNotify", client, USERMSG_RELIABLE|USERMSG_BLOCKHOOKS);
 		BfWrite bf = UserMessageToBfWrite(msg);
-		bf.WriteString(buffer);
+		bf.WriteString(!sBuffer[0] ? sDescription : sBuffer);
 		EndMessage();
 	}
+
+	delete pack;
 }
 
 /* Provide a way to uniquely identify an objective in the translation file */
-void GetTranslationPhraseForObjective(char[] buffer, int maxlength)
+void GetTransPhraseForCurrentObjective(char[] sBuffer, int maxlength)
 {
-	Address pObjective = GetCurrentObjective();
-	if(pObjective)
+	Address pObjective = ObjectiveManager_GetCurrentObjective(g_ObjMgr);
+	if(!pObjective)
+		return;
+
+	char sObjName[64];
+	Objective_GetName(pObjective, sObjName, sizeof(sObjName));
+
+	if(sObjName[0])
+		FormatEx(sBuffer, maxlength, "%s %s", g_sMapName, sObjName);
+}
+
+void Objective_GetName(Address self, char[] sBuffer, int maxlength)
+{
+	Address psValue = view_as<Address>(
+		LoadFromAddress(self + view_as<Address>(0x4), NumberType_Int32));
+	if(psValue)
+		UTIL_StringtToCharArray(psValue, sBuffer, maxlength);
+}
+
+Address ObjectiveManager_GetCurrentObjective(Address self)
+{
+	return view_as<Address>(LoadFromAddress(self + view_as<Address>(0x78), NumberType_Int32));
+}
+
+stock int UTIL_StringtToCharArray(Address stringt, char[] sBuffer, int maxlength)
+{
+	Address offs; int c;
+	while((c = LoadFromAddress(stringt + offs, NumberType_Int8)) != 0)
 	{
-		char objectiveName[64];
-		GetObjectiveName(pObjective, objectiveName, sizeof(objectiveName));
-
-		if(!IsNullString(objectiveName))
-			FormatEx(buffer, maxlength, "%s %s", mapName, objectiveName);	
+		Format(sBuffer, maxlength, "%s%c", sBuffer, c);
+		offs++;
 	}
-}
-
-void GetObjectiveName(Address pObjective, char[] buffer, int maxlength)
-{
-	Address pszValue = Addr(Deref(pObjective + 0x4));
-	if(pszValue)
-		GetCharArray(pszValue, buffer, maxlength);
-}
-
-Address GetCurrentObjective()
-{
-	return g_ObjectiveManager ? Addr(Deref(g_ObjectiveManager + Addr(0x78))) : Address_Null;
-}
-
-stock void GetCharArray(Address ptrCharArray, char[] buffer, int maxlength)
-{
-	Address current = Addr(0x0);
-	int c;
-	while((c = LoadFromAddress(ptrCharArray + current, NumberType_Int8)) != 0)
-	{
-		Format(buffer, maxlength, "%s%c", buffer, view_as<char>(c));
-		current += 0x1;
-	}
-}
-
-stock Address Addr(any value)
-{
-	return view_as<Address>(value);
-}
-
-stock int Deref(Address addr)
-{
-	return LoadFromAddress(addr, NumberType_Int32);
+	return view_as<int>(offs);
 }

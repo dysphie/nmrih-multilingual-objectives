@@ -14,7 +14,7 @@ public Plugin myinfo =
 	name = "[NMRiH] Multilingual Objectives",
 	author = "Dysphie",
 	description = "Display objective messages in the player's preferred language",
-	version = "1.0.4",
+	version = "1.0.5",
 	url = "https://forums.alliedmods.net/showthread.php?p=2678257"
 };
 
@@ -27,7 +27,9 @@ public void OnPluginStart()
 	g_ObjMgr = hGameConf.GetAddress("CNMRiH_ObjectiveManager");
 	if(!g_ObjMgr)
 		SetFailState("Failed to retrieve the objective manager");
-
+	
+	delete hGameConf;
+	
 	LoadTranslations("multilingual-objectives.phrases");
 
 	g_cvEnabled = CreateConVar("sm_translate_objectives", "1", "Toggle the translation of objective messages");

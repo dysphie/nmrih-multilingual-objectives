@@ -6,7 +6,8 @@
 		"de"	"Finde einen Weg, um aus dem Dachboden auszubrechen!"
 		"nl"	"Ontsnap van de zolder"
 
-		// Can also override the default English message
-		// "en" "Hello world"
+		// This is a comment
+		// You can also override the default English message
+		"en"	"Hello world"
 	}
 }

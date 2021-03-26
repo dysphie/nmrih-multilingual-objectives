@@ -818,7 +818,7 @@ public Action OnGameText(UserMsg msg_id, BfRead msg, const int[] players, int pl
 	int gameTextRef = -1;
 	gtDescToGtIndex.GetValue(activeText, gameTextRef);
 	int gameText = EntRefToEntIndex(gameTextRef);
-	if (gameTextRef == -1)
+	if (gameText == -1)
 		return Plugin_Continue;
 
 	// We found our entity, check if we translate for it

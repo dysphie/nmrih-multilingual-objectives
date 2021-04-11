@@ -105,7 +105,7 @@ methodmap Translator < StringMap
 			}
 			else
 			{
-				PhraseKeyToString(phrase, sizeof(phrase));
+				PhraseKeyToString(phrase, phrase, sizeof(phrase));
 				this.SetValue(phrase, langs);
 			}
 
@@ -118,12 +118,20 @@ methodmap Translator < StringMap
 
 	public bool CanTranslate(const char[] phrase)
 	{
+		bool result;
+
 		if (smapContainsKey == FeatureStatus_Available)
-			return this.ContainsKey(phrase);
-		
+		{
+			result = this.ContainsKey(phrase);
+		}
+		else
+		{
+			StringMap val;
+			result = this.GetValue(phrase, val);
+		}
+
+		return result;
 		// SM 1.10 and lower
-		any val;
-		return this.GetValue(phrase, val);
 	}
 
 	public bool TranslateForClient(int client, const char[] phrase, char[] buffer, int maxlen)
@@ -152,9 +160,7 @@ methodmap Translator < StringMap
 		}
 
 		if (!translated)
-		{
 			translated = langs.GetString("default", buffer, maxlen);
-		}
 
 		return translated;
 	}
@@ -192,6 +198,7 @@ public void OnPluginStart()
 {
 	BuildPath(Path_SM, fullTransPath, sizeof(fullTransPath), "configs/multilingual-objectives");
 	smapContainsKey = GetFeatureStatus(FeatureType_Native, "StringMap.ContainsKey");
+
 
 	lateSpawnedGameText = new ArrayStack(sizeof(GameTextInfo));
 	objDescToObjName = new StringMap();
@@ -597,11 +604,11 @@ int LearnGameText(KeyValues kv)
 		if (!gti.text[0])
 			continue;
 
-		gtDescToGtIndex.SetValue(gti.text, EntIndexToEntRef(entity));
-
-		StringToPhraseValue(gti.text, sizeof(gti.text));
-		if (GetGameTextIdentifier(entity, gti.id, sizeof(gti.id)))
+		gtDescToGtIndex.SetValue(gti.text, EntIndexToEntRef(entity), true);
+		
+		if (GetGameTextID(entity, gti.id, sizeof(gti.id)))
 		{
+			StringToPhraseValue(gti.text, sizeof(gti.text));
 			CreatePhraseBlock(kv, gti.id, gti.text);
 			count++;
 		}
@@ -748,34 +755,37 @@ bool ExportTranslationFile(KeyValues kv, const char[] mapName)
 	return kv.ExportToFile(path);
 }
 
-public void OnEntitySpawned(int entity, const char[] classname)
+public void OnEntityCreated(int entity, const char[] classname)
 {
-	// Bail if we haven't load file objectives yet / not gametext
-	if (loadedGametextPhrases && StrEqual(classname, "game_text"))
+	if (StrEqual(classname, "game_text"))
+		SDKHook(entity, SDKHook_Spawn, OnGameTextSpawned);
+}
+
+public Action OnGameTextSpawned(int gametext)
+{
+	GameTextInfo gti;
+
+	if (!GetEntPropString(gametext, Prop_Data, "m_iszMessage", gti.text, sizeof(gti.text)))
+		return Plugin_Continue;
+
+	gtDescToGtIndex.SetValue(gti.text, EntIndexToEntRef(gametext), true);
+	
+
+	// We caught a new unknown gametext! Schedule for saving on map end
+	if (loadedGametextPhrases && 
+		GetGameTextID(gametext, gti.id, sizeof(gti.id)) && 
+		!gameTextTranslator.CanTranslate(gti.id))
 	{
-		GameTextInfo info;
-		GetEntPropString(entity, Prop_Data, "m_iszMessage", info.text, sizeof(info.text));
-		if (!info.text[0])	// Nothing to translate..
-			return;
-
-		// If game_text has neither text nor hammerID then there's nothing we can do
-		if (!GetGameTextIdentifier(entity, info.id, sizeof(info.id)))
-			return;
-
-		// Already translated, we don't care
-		if (gameTextTranslator.CanTranslate(info.id))
-		{
-			gtDescToGtIndex.SetValue(info.text, EntIndexToEntRef(entity));
-			return;
-		}
-
-		// We caught a new unknown gametext! Schedule for saving on map end
-		lateSpawnedGameText.PushArray(info);
+		StringToPhraseValue(gti.id, sizeof(gti.id));
+		StringToPhraseValue(gti.text, sizeof(gti.text));
+		lateSpawnedGameText.PushArray(gti);
 	}
+
+	return Plugin_Continue;
 }
 
 
-bool GetGameTextIdentifier(int gametext, char[] buffer, int maxlen)
+bool GetGameTextID(int gametext, char[] buffer, int maxlen)
 {
 	int hammerID = GetEntProp(gametext, Prop_Data, "m_iHammerID");
 	if (hammerID)
@@ -815,19 +825,37 @@ public Action OnGameText(UserMsg msg_id, BfRead msg, const int[] players, int pl
 	char activeText[MAX_GAMETEXT_LEN];
 	msg.ReadString(activeText, sizeof(activeText));
 
+
+
 	int gameTextRef = -1;
 	gtDescToGtIndex.GetValue(activeText, gameTextRef);
+
+
 	int gameText = EntRefToEntIndex(gameTextRef);
+
+
 	if (gameText == -1)
+	{
 		return Plugin_Continue;
+	}
+
+
 
 	// We found our entity, check if we translate for it
 	GameTextInfo gti;
-	if (!GetGameTextIdentifier(gameText, gti.id, sizeof(gti.id)))
+	if (!GetGameTextID(gameText, gti.id, sizeof(gti.id)))
+	{
+
 		return Plugin_Continue;
+	}
+
 
 	if (!gameTextTranslator.CanTranslate(gti.id))
+	{
 		return Plugin_Continue;
+	}
+
+
 
 	// So we do, but we can't edit the usermsg, we must wait a frame and send our own.
 	// Can't pass the BfRead around either since we don't own it
@@ -899,6 +927,7 @@ void TranslateGameText(DataPack textParams)
 
 	for (int i; i < playersNum; i++)
 	{
+
 		int client = GetClientOfUserId(userIds[i]);
 		if (client)
 		{
@@ -926,6 +955,9 @@ void TranslateGameText(DataPack textParams)
 			bf.WriteFloat(fxTime);
 			bf.WriteString(transDesc);
 			EndMessage();
+		}
+		else
+		{
 		}
 	}
 }
@@ -997,15 +1029,15 @@ void strtolower(char[] str)
 	}
 }
 
-// Ugly hack to prevent '/' from being interpreted as a new section
-// Also insert new lines as '\n' instead of an actual newline, wtf Valve?
-void PhraseKeyToString(char[] phrase, int maxlen)
+
+void PhraseKeyToString(char[] phrase)
 {
 	ReplaceString(phrase, maxlen, "||", "/");
+	ReplaceString(phrase, maxlen, "\\n", "\n");
 	strtolower(phrase);
 }
 
-void StringToPhraseKey(char[] phrase, int maxlen)
+void StringToPhraseKey(char[] phrase, char[] buffer, int maxlen)
 {
 	ReplaceString(phrase, maxlen, "/", "||");
 	ReplaceString(phrase, maxlen, "\n", "\\n");

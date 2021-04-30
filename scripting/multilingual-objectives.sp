@@ -482,7 +482,7 @@ bool ParseMap(const char[] mapName, char[] error = "", int maxlen = 0, bool isAc
 
 	// Don't save if count is 0, as nothing should've changed
 	bool result = true;
-	if (gametextCount | objCount)
+	if (gametextCount || objCount)
 	{
 		result = kv.ExportToFile(transPath);
 		if (!result)

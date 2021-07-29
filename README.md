@@ -1,5 +1,10 @@
 # [NMRiH] Multilingual Objectives
 
+### Important note
+
+If this is your first time trying to install this I'd urge you to check out [Map Translator](https://github.com/dysphie/nmrih-map-translator).
+It provides support for a wider variety of messages and can auto-generate translation files for you.
+
 ### Description 
 This plugin adds localization support for native objective messages. 
 It differs from [\[NMRiH\]Multilingual Objective Beta 1.41]("https://forums.alliedmods.net/showthread.php?p=2305894") in that it overrides the actual screen pop-up, rather than displaying additional game text.

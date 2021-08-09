@@ -2,7 +2,7 @@
 
 ### Important note
 
-If this is your first time trying to install this I'd urge you to use my other plugin [Map Translator](https://github.com/dysphie/nmrih-map-translator) instead.
+If this is your first time trying to install this I'd urge you to use my other plugin [Map Translator](https://github.com/dysphie/sm-map-translator) instead.
 It provides support for a wider variety of messages and can auto-generate translation files for you.
 
 ### Description 
